@@ -46,14 +46,14 @@ def main():
         confidence = max(probabilities[0]) * 100
         
         print("\n" + "="*40)
-        print(f"🎵 PREDICTED GENRE: {predicted_genre.upper()}")
-        print(f"🎯 CONFIDENCE: {confidence:.1f}%")
+        print(f" PREDICTED GENRE: {predicted_genre.upper()}")
+        print(f" CONFIDENCE: {confidence:.1f}%")
         print("="*40)
         
         print("\nAll genre probabilities:")
         for i, genre in enumerate(label_encoder.classes_):
             prob = probabilities[0][i] * 100
-            bar = "█" * int(prob / 5)  # Simple bar chart
+            bar = "BAR" * int(prob / 5)  # Simple bar chart
             print(f"{genre:10s}: {prob:5.1f}% {bar}")
         
         print("\n✓ Prediction completed successfully!")
@@ -65,3 +65,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
