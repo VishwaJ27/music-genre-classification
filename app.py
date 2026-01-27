@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Main app title
-st.title("🎵 Music Genre Classification")
+st.title("Music Genre Classification")
 st.write("Upload a WAV audio file to predict its genre using machine learning!")
 
 try:
@@ -17,7 +17,7 @@ try:
         st.success("✓ AI model loaded successfully")
         st.info(f"**Supported Genres:** {', '.join(label_encoder.classes_)}")
     else:
-        st.error("❌ Model files not found. Please train the model first.")
+        st.error("Model files not found. Please train the model first.")
         st.stop()
     
     # Import feature extraction
@@ -26,7 +26,7 @@ try:
     
     # File uploader section
     st.markdown("---")
-    st.subheader("📁 Upload Your Music File")
+    st.subheader("Upload Your Music File")
     uploaded_file = st.file_uploader(
         "Choose a WAV audio file", 
         type=["wav"],
@@ -35,18 +35,18 @@ try:
     
     if uploaded_file is not None:
         # Display file information
-        st.write(f"**📄 File:** {uploaded_file.name}")
-        st.write(f"**📊 Size:** {uploaded_file.size:,} bytes")
+        st.write(f"** File:** {uploaded_file.name}")
+        st.write(f"** Size:** {uploaded_file.size:,} bytes")
         
         # Audio player
-        st.subheader("🎧 Audio Preview")
+        st.subheader("Audio Preview")
         st.audio(uploaded_file, format="audio/wav")
         
         # Prediction section
-        st.subheader("🎯 Genre Prediction")
+        st.subheader("Genre Prediction")
         
-        if st.button("🚀 Analyze Music Genre", type="primary"):
-            with st.spinner("🎵 Analyzing audio features..."):
+        if st.button("Analyze Music Genre", type="primary"):
+            with st.spinner("Analyzing audio features..."):
                 try:
                     # Save uploaded file temporarily
                     temp_filename = f"temp_{uploaded_file.name}"
@@ -70,11 +70,11 @@ try:
                         confidence = max(probabilities[0]) * 100
                         
                         # Display main result
-                        st.success(f"🎶 **Predicted Genre: {predicted_genre.upper()}**")
-                        st.metric("🎯 Confidence Level", f"{confidence:.1f}%")
+                        st.success(f"**Predicted Genre: {predicted_genre.upper()}**")
+                        st.metric("Confidence Level", f"{confidence:.1f}%")
                         
                         # Show detailed predictions
-                        st.subheader("📊 Detailed Analysis")
+                        st.subheader("Detailed Analysis")
                         
                         # Create probability data
                         prob_data = []
@@ -89,11 +89,11 @@ try:
                         st.write("**Top 5 Genre Predictions:**")
                         for i, (genre, prob) in enumerate(prob_data[:5]):
                             if i == 0:
-                                st.write(f"🥇 **{genre.capitalize()}**: {prob:.1f}%")
+                                st.write(f"**{genre.capitalize()}**: {prob:.1f}%")
                             elif i == 1:
-                                st.write(f"🥈 **{genre.capitalize()}**: {prob:.1f}%")
+                                st.write(f"**{genre.capitalize()}**: {prob:.1f}%")
                             elif i == 2:
-                                st.write(f"🥉 **{genre.capitalize()}**: {prob:.1f}%")
+                                st.write(f"**{genre.capitalize()}**: {prob:.1f}%")
                             else:
                                 st.write(f"   {i+1}. {genre.capitalize()}: {prob:.1f}%")
                         
@@ -103,10 +103,10 @@ try:
                             st.progress(prob/100, text=f"{genre.capitalize()}: {prob:.1f}%")
                         
                     else:
-                        st.error("❌ Could not analyze the audio file. Please make sure it's a valid WAV file.")
+                        st.error("Could not analyze the audio file. Please make sure it's a valid WAV file.")
                         
                 except Exception as e:
-                    st.error(f"❌ Error processing audio: {e}")
+                    st.error(f"Error processing audio: {e}")
                     # Clean up on error
                     if 'temp_filename' in locals() and os.path.exists(temp_filename):
                         os.remove(temp_filename)
@@ -114,7 +114,7 @@ try:
     else:
         # Instructions when no file is uploaded
         st.markdown("---")
-        st.subheader("📋 How to Use")
+        st.subheader("How to Use")
         st.write("""
         1. **Upload** a WAV audio file using the file uploader above
         2. **Preview** your music using the audio player
@@ -122,12 +122,12 @@ try:
         4. **View** the predicted genre with confidence scores
         """)
         
-        st.subheader("🎵 Supported Music Genres")
+        st.subheader("Supported Music Genres")
         if 'label_encoder' in locals():
             genres_list = [genre.capitalize() for genre in label_encoder.classes_]
             st.write(", ".join(genres_list))
         
-        st.subheader("💡 Tips for Best Results")
+        st.subheader("Tips for Best Results")
         st.write("""
         - Use **WAV format** audio files
         - Audio should be at least **10 seconds long**
@@ -136,10 +136,12 @@ try:
         """)
     
 except Exception as e:
-    st.error(f"❌ Application Error: {e}")
+    st.error(f"Application Error: {e}")
     st.write("Please make sure all required files are present and dependencies are installed.")
 
 # Footer
 st.markdown("---")
-st.markdown("**🎵 Built with Machine Learning and Streamlit**")
+st.markdown("**Built with Machine Learning and Streamlit**")
+
 st.markdown("*Upload a WAV file above to get started!*")	
+
