@@ -1,147 +1,196 @@
 import streamlit as st
+import joblib
+import numpy as np
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
 
-# Main app title
-st.title("Music Genre Classification")
-st.write("Upload a WAV audio file to predict its genre using machine learning!")
+from feature_extraction import extract_features
 
-try:
-    import joblib
-    import numpy as np
-    import os
-    st.success("✓ System ready")
-    
-    # Load model and label encoder
-    if os.path.exists("music_genre_model.pkl") and os.path.exists("label_encoder.pkl"):
-        model = joblib.load("music_genre_model.pkl")
-        label_encoder = joblib.load("label_encoder.pkl")
-        st.success("✓ AI model loaded successfully")
-        st.info(f"**Supported Genres:** {', '.join(label_encoder.classes_)}")
-    else:
-        st.error("Model files not found. Please train the model first.")
-        st.stop()
-    
-    # Import feature extraction
-    from feature_extraction import extract_features
-    st.success("✓ Audio processing ready")
-    
-    # File uploader section
-    st.markdown("---")
-    st.subheader("Upload Your Music File")
-    uploaded_file = st.file_uploader(
-        "Choose a WAV audio file", 
-        type=["wav"],
-        help="Upload a WAV format audio file to classify its genre"
-    )
-    
-    if uploaded_file is not None:
-        # Display file information
-        st.write(f"** File:** {uploaded_file.name}")
-        st.write(f"** Size:** {uploaded_file.size:,} bytes")
-        
-        # Audio player
-        st.subheader("Audio Preview")
-        st.audio(uploaded_file, format="audio/wav")
-        
-        # Prediction section
-        st.subheader("Genre Prediction")
-        
-        if st.button("Analyze Music Genre", type="primary"):
-            with st.spinner("Analyzing audio features..."):
-                try:
-                    # Save uploaded file temporarily
-                    temp_filename = f"temp_{uploaded_file.name}"
-                    with open(temp_filename, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-                    
-                    # Extract audio features
-                    features = extract_features(temp_filename)
-                    
-                    # Clean up temporary file
-                    if os.path.exists(temp_filename):
-                        os.remove(temp_filename)
-                    
-                    if features is not None:
-                        # Make prediction
-                        features = features.reshape(1, -1)
-                        prediction = model.predict(features)
-                        probabilities = model.predict_proba(features)
-                        
-                        predicted_genre = label_encoder.inverse_transform(prediction)[0]
-                        confidence = max(probabilities[0]) * 100
-                        
-                        # Display main result
-                        st.success(f"**Predicted Genre: {predicted_genre.upper()}**")
-                        st.metric("Confidence Level", f"{confidence:.1f}%")
-                        
-                        # Show detailed predictions
-                        st.subheader("Detailed Analysis")
-                        
-                        # Create probability data
-                        prob_data = []
-                        for i, genre in enumerate(label_encoder.classes_):
-                            prob = probabilities[0][i] * 100
-                            prob_data.append((genre, prob))
-                        
-                        # Sort by probability
-                        prob_data.sort(key=lambda x: x[1], reverse=True)
-                        
-                        # Show top 5 predictions
-                        st.write("**Top 5 Genre Predictions:**")
-                        for i, (genre, prob) in enumerate(prob_data[:5]):
-                            if i == 0:
-                                st.write(f"**{genre.capitalize()}**: {prob:.1f}%")
-                            elif i == 1:
-                                st.write(f"**{genre.capitalize()}**: {prob:.1f}%")
-                            elif i == 2:
-                                st.write(f"**{genre.capitalize()}**: {prob:.1f}%")
-                            else:
-                                st.write(f"   {i+1}. {genre.capitalize()}: {prob:.1f}%")
-                        
-                        # Show all probabilities as progress bars
-                        st.write("**All Genre Probabilities:**")
-                        for genre, prob in prob_data:
-                            st.progress(prob/100, text=f"{genre.capitalize()}: {prob:.1f}%")
-                        
-                    else:
-                        st.error("Could not analyze the audio file. Please make sure it's a valid WAV file.")
-                        
-                except Exception as e:
-                    st.error(f"Error processing audio: {e}")
-                    # Clean up on error
-                    if 'temp_filename' in locals() and os.path.exists(temp_filename):
-                        os.remove(temp_filename)
-    
-    else:
-        # Instructions when no file is uploaded
-        st.markdown("---")
-        st.subheader("How to Use")
-        st.write("""
-        1. **Upload** a WAV audio file using the file uploader above
-        2. **Preview** your music using the audio player
-        3. **Click** the "Analyze Music Genre" button
-        4. **View** the predicted genre with confidence scores
-        """)
-        
-        st.subheader("Supported Music Genres")
-        if 'label_encoder' in locals():
-            genres_list = [genre.capitalize() for genre in label_encoder.classes_]
-            st.write(", ".join(genres_list))
-        
-        st.subheader("Tips for Best Results")
-        st.write("""
-        - Use **WAV format** audio files
-        - Audio should be at least **10 seconds long**
-        - **High-quality** recordings work better
-        - **Full songs** give more accurate results than short clips
-        """)
-    
-except Exception as e:
-    st.error(f"Application Error: {e}")
-    st.write("Please make sure all required files are present and dependencies are installed.")
+# ---------------------- PAGE CONFIG ----------------------
+st.set_page_config(
+    page_title="Music Genre Classification",
+    layout="centered",
+    initial_sidebar_state="collapsed"
+)
 
-# Footer
+# ---------------------- GLOBAL CSS (THEME + ANIMATION) ----------------------
+st.markdown("""
+<style>
+:root {
+    --accent-color: #6D28D9;
+}
+
+.fade-in {
+    animation: fadeIn 1.2s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.gradient-text {
+    color: var(--accent-color);
+    font-weight: 700;
+}
+
+.result-card {
+    background-color: #f8f9fa;
+    color: var(--accent-color);
+    padding: 22px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-top: 10px;
+    border: 1px solid rgba(109, 40, 217, 0.2);
+}
+
+/* Button styling */
+.stButton > button {
+    background-color: var(--accent-color);
+    color: white;
+    border-radius: 6px;
+    border: none;
+    padding: 0.6rem 1rem;
+    font-weight: 500;
+}
+
+.stButton > button:hover {
+    background-color: #5b21b6;
+}
+
+/* Section headings */
+h3 {
+    color: var(--accent-color);
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------------- LOAD MODEL ----------------------
+@st.cache_resource
+def load_assets():
+    model = joblib.load("music_genre_model.pkl")
+    encoder = joblib.load("label_encoder.pkl")
+    return model, encoder
+
+if not (os.path.exists("music_genre_model.pkl") and os.path.exists("label_encoder.pkl")):
+    st.error("Model files not found. Please train the model first.")
+    st.stop()
+
+model, label_encoder = load_assets()
+
+# ---------------------- HEADER ----------------------
+st.markdown(
+    """
+    <div class="fade-in">
+        <h2 class="gradient-text" style="text-align:center;">
+            Music Genre Classification
+        </h2>
+        <p style="text-align:center; color:#6c757d;">
+            AI-based music genre recognition using machine learning
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 st.markdown("---")
-st.markdown("**Built with Machine Learning and Streamlit**")
 
-st.markdown("*Upload a WAV file above to get started!*")	
+# ---------------------- FILE UPLOAD ----------------------
+uploaded_file = st.file_uploader(
+    "Upload WAV Audio File",
+    type=["wav"]
+)
 
+if uploaded_file:
+    st.audio(uploaded_file)
+
+    st.markdown("---")
+
+    if st.button("Analyze Audio", use_container_width=True):
+
+        with st.spinner("Analyzing audio..."):
+
+            temp_file = f"temp_{uploaded_file.name}"
+            with open(temp_file, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+
+            features = extract_features(temp_file)
+            os.remove(temp_file)
+
+            if features is None:
+                st.error("Unable to process this audio file.")
+                st.stop()
+
+            features = features.reshape(1, -1)
+
+            prediction = model.predict(features)
+            probabilities = model.predict_proba(features)[0]
+
+            predicted_genre = label_encoder.inverse_transform(prediction)[0]
+
+        # ---------------------- RESULT ----------------------
+        st.markdown("### Prediction Result")
+
+        st.markdown(
+            f"""
+            <div class="result-card fade-in">
+                {predicted_genre.upper()}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # ---------------------- PROBABILITY CHART ----------------------
+        st.markdown("### Genre Probability Distribution")
+
+        prob_df = pd.DataFrame({
+            "Genre": label_encoder.classes_,
+            "Probability (%)": probabilities * 100
+        }).sort_values(by="Probability (%)", ascending=False)
+
+        st.markdown("<div class='fade-in'>", unsafe_allow_html=True)
+
+        fig, ax = plt.subplots()
+        ax.barh(prob_df["Genre"], prob_df["Probability (%)"])
+        ax.invert_yaxis()
+        ax.set_xlabel("Probability (%)")
+        ax.set_ylabel("Genre")
+
+        for bar in ax.patches:
+            bar.set_color("#6D28D9")
+
+        st.pyplot(fig)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # ---------------------- EXPLANATION ----------------------
+        with st.expander("How this prediction works"):
+            st.write("""
+            - Audio features are extracted from the waveform
+            - Spectral and temporal characteristics are analyzed
+            - A trained machine learning classifier predicts genre probabilities
+            - The genre with the highest probability is selected
+            """)
+
+else:
+    # ---------------------- INSTRUCTIONS ----------------------
+    st.markdown(
+        """
+        ### How to Use
+        - Upload a WAV audio file
+        - Click **Analyze Audio**
+        - View the predicted genre and probability distribution
+
+        ### Notes
+        - WAV format recommended
+        - Audio duration ≥ 10 seconds
+        - Full tracks perform better than short clips
+        """
+    )
+
+st.markdown("---")
+st.caption("Music Genre Classification System | Machine Learning Application")
